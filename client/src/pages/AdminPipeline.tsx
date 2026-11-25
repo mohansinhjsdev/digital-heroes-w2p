@@ -135,7 +135,7 @@ export const AdminPipeline: React.FC = () => {
           </div>
           <div className="bg-stone-50 border border-stone-200 px-3.5 py-2 rounded-lg">
             <span className="text-stone-500 block text-[10px]">TOTAL VALUE</span>
-            <span className="text-base font-bold text-stone-900">£{totalRevenue.toFixed(2)}</span>
+            <span className="text-base font-bold text-stone-900">₹{totalRevenue.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -224,7 +224,7 @@ export const AdminPipeline: React.FC = () => {
                         {job.divisionName || "Print Item"}
                       </div>
                       <div className="text-[11px] text-stone-900 font-bold">
-                        {job.quantity} units · £{Number(job.totalPrice).toFixed(2)}
+                        {job.quantity} units · ₹{Number(job.totalPrice).toFixed(2)}
                       </div>
                     </td>
                     <td className="p-3.5">

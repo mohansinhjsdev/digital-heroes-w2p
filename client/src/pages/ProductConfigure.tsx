@@ -358,15 +358,15 @@ export const ProductConfigure: React.FC = () => {
           <div className="space-y-2 pt-1 font-mono text-xs">
             <div className="flex justify-between text-stone-600">
               <span>Unit Price (Tier Adjusted)</span>
-              <span className="text-stone-900 font-bold">£{unitPrice.toFixed(2)} / ea</span>
+              <span className="text-stone-900 font-bold">₹{unitPrice.toFixed(2)} / ea</span>
             </div>
             <div className="flex justify-between text-stone-600">
               <span>Subtotal ({quantity} units)</span>
-              <span className="text-stone-900">£{subtotal.toFixed(2)}</span>
+              <span className="text-stone-900">₹{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-stone-600">
-              <span>VAT @ 20%</span>
-              <span className="text-stone-900">£{taxAmount.toFixed(2)}</span>
+              <span>VAT / GST @ 18%</span>
+              <span className="text-stone-900">₹{taxAmount.toFixed(2)}</span>
             </div>
 
             <div className="pt-3 border-t border-stone-200 flex justify-between items-baseline">
@@ -375,7 +375,7 @@ export const ProductConfigure: React.FC = () => {
                 <span className="text-[10px] text-stone-400">Xero-ready record</span>
               </div>
               <span className="text-2xl font-black text-stone-900">
-                £{totalPrice.toFixed(2)}
+                ₹{totalPrice.toFixed(2)}
               </span>
             </div>
           </div>

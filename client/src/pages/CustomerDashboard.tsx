@@ -188,7 +188,7 @@ export const CustomerDashboard: React.FC = () => {
                         {ord.createdAt ? new Date(ord.createdAt).toISOString().split("T")[0] : "Today"}
                       </td>
                       <td className="p-3.5 text-stone-900 font-semibold">{ord.quantity} pcs</td>
-                      <td className="p-3.5 text-stone-900 font-bold">£{Number(ord.totalPrice).toFixed(2)}</td>
+                      <td className="p-3.5 text-stone-900 font-bold">₹{Number(ord.totalPrice).toFixed(2)}</td>
                       <td className="p-3.5">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getStatusBadge(ord.status)}`}>
                           {ord.status}
