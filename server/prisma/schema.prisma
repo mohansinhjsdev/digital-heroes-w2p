@@ -1,0 +1,201 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  PUBLIC_VISITOR
+  CUSTOMER
+  ADMIN
+}
+
+enum DivisionSlug {
+  LABELS_STICKERS
+  RACE_EVENT_NUMBERS
+  MTB_BOARDS
+  STAMPS
+  TROPHIES
+  LASER_CUT
+}
+
+enum PipelineStatus {
+  QUOTE
+  ORDER
+  ARTWORK
+  PROOF
+  PRODUCTION
+  COMPLETED
+}
+
+enum ProofStatus {
+  PENDING
+  CHANGES_REQUESTED
+  APPROVED
+}
+
+enum OutputFileType {
+  PROOF_PREVIEW
+  PRINT_READY_PDF
+  CSV_VARIABLE_DATA_PDF
+  UPLOADED_ARTWORK
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String
+  name         String
+  role         Role          @default(CUSTOMER)
+  companyName  String?
+  phone        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  orders       Order[]
+  savedDesigns SavedDesign[]
+  proofLogs    ProofLog[]
+
+  @@map("users")
+}
+
+model ProductDivision {
+  id                 String       @id @default(uuid())
+  slug               DivisionSlug @unique
+  name               String
+  tagline            String
+  description        String
+  basePrice          Float        // Base setup fee
+  pricePerSqMm       Float        // Area based pricing factor
+  minQuantity        Int          @default(1)
+  defaultWidthMm     Float
+  defaultHeightMm    Float
+  bleedMm            Float        @default(3.0) // 3mm standard industrial bleed
+  safeZoneMm         Float        @default(3.0) // 3mm safe margin from cutting line
+  supportsCsvMerge   Boolean      @default(false)
+  allowedMaterials   String[]     // E.g. ["Gloss Vinyl", "Matte Poly", "Heavyweight Kraft"]
+  galleryImages      String[]
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  orders             Order[]
+  savedDesigns       SavedDesign[]
+
+  @@map("product_divisions")
+}
+
+model SavedDesign {
+  id           String          @id @default(uuid())
+  customerId   String
+  customer     User            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  divisionId   String
+  division     ProductDivision @relation(fields: [divisionId], references: [id])
+  name         String
+  widthMm      Float
+  heightMm     Float
+  canvasJson   String          // Serialized canvas layers, texts, elements, colors
+  previewUrl   String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  orders       Order[]
+
+  @@map("saved_designs")
+}
+
+model Order {
+  id               String          @id @default(uuid())
+  orderNumber      String          @unique // e.g., "DH-2026-0001"
+  customerId       String
+  customer         User            @relation(fields: [customerId], references: [id])
+  divisionId       String
+  division         ProductDivision @relation(fields: [divisionId], references: [id])
+  savedDesignId    String?
+  savedDesign      SavedDesign?    @relation(fields: [savedDesignId], references: [id])
+
+  status           PipelineStatus  @default(QUOTE)
+
+  // Configuration Parameters
+  widthMm          Float
+  heightMm         Float
+  material         String
+  orientation      String          @default("PORTRAIT") // "PORTRAIT" or "LANDSCAPE"
+  quantity         Int
+
+  // Pricing & Accounting (Xero ready data structure)
+  unitPrice        Float
+  subtotal         Float
+  discountPercent  Float           @default(0.0)
+  discountAmount   Float           @default(0.0)
+  taxRate          Float           @default(0.20) // 20% VAT standard
+  taxAmount        Float
+  totalPrice       Float
+
+  // Artwork & Variable Data
+  canvasJson       String?         // Full editor canvas state if built online
+  uploadedArtwork  String?         // Path to raw PDF/AI/PNG uploaded by user
+  hasCsvData       Boolean         @default(false)
+  csvRawData       String?         // CSV file content or path
+  csvMappingJson   String?         // Column mapping e.g. {"#": "number", "name": "athlete_name"}
+
+  // Approvals & Gates
+  isApproved       Boolean         @default(false)
+  approvedAt       DateTime?
+  approvedByUserId String?
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  proofRevisions   ProofRevision[]
+  productionFiles  ProductionFile[]
+
+  @@map("orders")
+}
+
+model ProofRevision {
+  id                 String      @id @default(uuid())
+  orderId            String
+  order              Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  version            Int         @default(1) // v1, v2, v3
+  previewImageUrl    String
+  pdfPreviewUrl      String?
+  status             ProofStatus @default(PENDING)
+  changeRequestNote  String?
+  reviewedAt         DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  proofLogs          ProofLog[]
+
+  @@map("proof_revisions")
+}
+
+model ProofLog {
+  id         String        @id @default(uuid())
+  revisionId String
+  revision   ProofRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User          @relation(fields: [userId], references: [id])
+  action     String        // "SUBMITTED_V1", "REQUESTED_CHANGES", "APPROVED"
+  notes      String?
+  timestamp  DateTime      @default(now())
+
+  @@map("proof_logs")
+}
+
+model ProductionFile {
+  id          String         @id @default(uuid())
+  orderId     String
+  order       Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fileName    String         // e.g. "DH-2026-0001_LABELS_STICKERS_2026-11-24_Output.pdf"
+  fileType    OutputFileType
+  fileUrl     String
+  fileSizeKb  Float          @default(0.0)
+  isUnlocked  Boolean        @default(false) // Gated: Unlocks ONLY when ProofStatus == APPROVED
+  createdAt   DateTime       @default(now())
+
+  @@map("production_files")
+}
