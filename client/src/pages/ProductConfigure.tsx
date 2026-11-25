@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { orderStore } from "../services/orderStore";
 import {
   Calculator,
   CheckCircle2,
@@ -146,6 +148,47 @@ export const ProductConfigure: React.FC = () => {
   const subtotal = Number((unitPrice * quantity).toFixed(2));
   const taxAmount = Number((subtotal * 0.20).toFixed(2));
   const totalPrice = Number((subtotal + taxAmount).toFixed(2));
+
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadedFile, setUploadedFile] = useState<{ name: string; size: string } | null>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+    setUploadedFile({
+      name: file.name,
+      size: sizeMb === "0.0" ? `${Math.round(file.size / 1024)} KB` : `${sizeMb} MB`,
+    });
+  };
+
+  const handleOrderWithUploadedFile = () => {
+    if (!user) {
+      alert("Please sign in or register to place your order with uploaded artwork.");
+      navigate("/login", { state: { from: { pathname: window.location.pathname + window.location.search } } });
+      return;
+    }
+    const saved = orderStore.saveOrder({
+      customerId: user.id,
+      customerName: user.name,
+      customerEmail: user.email,
+      divisionSlug: currentSlug,
+      divisionName: currentSlug.replace(/-/g, " ").toUpperCase(),
+      widthMm,
+      heightMm,
+      material,
+      quantity,
+      unitPrice,
+      subtotal,
+      totalPrice,
+      status: "PROOF",
+      isApproved: false,
+      hasCsvData: false,
+      fileName: uploadedFile?.name || "Uploaded_Artwork.pdf",
+    });
+    navigate(`/proof-review?orderId=${saved.orderNumber}&division=${currentSlug}`);
+  };
 
   const handleLaunchDesigner = () => {
     const params = new URLSearchParams({
@@ -389,13 +432,40 @@ export const ProductConfigure: React.FC = () => {
               <span>Launch W2P Designer</span>
             </button>
 
-            <button
-              onClick={() => alert("Direct PDF/AI finished artwork upload path ready in W2P editor.")}
-              className="w-full py-2 rounded-lg bg-white hover:bg-stone-50 text-stone-700 font-medium text-xs border border-stone-300 flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <Upload className="w-3.5 h-3.5 text-stone-500" />
-              <span>Upload Finished Artwork</span>
-            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".pdf,.png,.svg,.ai,.eps,.jpg,.jpeg"
+              className="hidden"
+            />
+
+            {uploadedFile ? (
+              <div className="space-y-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 text-emerald-900 font-semibold truncate">
+                    <FileCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span className="truncate">{uploadedFile.name}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-emerald-700 shrink-0">{uploadedFile.size}</span>
+                </div>
+                <button
+                  onClick={handleOrderWithUploadedFile}
+                  className="w-full py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Submit Order with Uploaded PDF/Artwork</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-2 rounded-lg bg-white hover:bg-stone-50 text-stone-700 font-medium text-xs border border-stone-300 flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <Upload className="w-3.5 h-3.5 text-stone-500" />
+                <span>Upload Finished Artwork (PDF, SVG, AI, PNG)</span>
+              </button>
+            )}
           </div>
 
           <div className="pt-2 flex items-center justify-center gap-4 text-[11px] font-mono text-stone-500">

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
@@ -10,12 +10,13 @@ import {
   Eye,
   Save,
   Trash2,
-  ArrowRight
+  ArrowRight,
+  Upload
 } from "lucide-react";
 
 interface CanvasElement {
   id: string;
-  type: "text" | "rect" | "badge" | "number_placeholder" | "name_placeholder";
+  type: "text" | "rect" | "badge" | "number_placeholder" | "name_placeholder" | "image";
   x: number;
   y: number;
   width: number;
@@ -28,6 +29,7 @@ interface CanvasElement {
   backgroundColor?: string;
   textAlign?: "left" | "center" | "right";
   customEdited?: boolean;
+  imageUrl?: string;
 }
 
 const getInitialElements = (slug: string, userName?: string): CanvasElement[] => {
@@ -238,6 +240,31 @@ export const Designer: React.FC = () => {
     );
   };
 
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      const newImgEl: CanvasElement = {
+        id: `elem-${Date.now()}`,
+        type: "image",
+        x: 30,
+        y: 30,
+        width: 40,
+        height: 35,
+        imageUrl: dataUrl,
+        text: file.name,
+        customEdited: true,
+      };
+      setElements((prev) => [...prev, newImgEl]);
+      setSelectedElementId(newImgEl.id);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAddText = () => {
     const newEl: CanvasElement = {
       id: `elem-${Date.now()}`,
@@ -433,6 +460,15 @@ export const Designer: React.FC = () => {
           
           <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-2.5 shadow-sm">
             <h3 className="text-xs font-mono uppercase text-stone-600 font-bold">Add Elements</h3>
+            
+            <input
+              type="file"
+              ref={imageInputRef}
+              onChange={handleUploadLogo}
+              accept=".png,.jpg,.jpeg,.svg,.webp"
+              className="hidden"
+            />
+
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={handleAddText}
@@ -462,6 +498,14 @@ export const Designer: React.FC = () => {
                 <span>Color Block</span>
               </button>
             </div>
+
+            <button
+              onClick={() => imageInputRef.current?.click()}
+              className="w-full py-2 rounded-lg bg-stone-50 hover:bg-stone-100 border border-stone-200 text-xs text-stone-800 flex items-center justify-center gap-1.5 transition-colors font-medium"
+            >
+              <Upload className="w-3.5 h-3.5 text-stone-600" />
+              <span>Upload Logo / Artwork (PNG, SVG)</span>
+            </button>
           </div>
 
           {/* Active Layers List */}
@@ -780,7 +824,13 @@ export const Designer: React.FC = () => {
                         : "hover:outline hover:outline-1 hover:outline-stone-400"
                     }`}
                   >
-                    {elem.type === "rect" || elem.type === "badge" ? null : (
+                    {elem.type === "image" && elem.imageUrl ? (
+                      <img
+                        src={elem.imageUrl}
+                        alt={elem.text || "Artwork"}
+                        className="w-full h-full object-contain pointer-events-none select-none"
+                      />
+                    ) : elem.type === "rect" || elem.type === "badge" ? null : (
                       <span className="font-extrabold tracking-tight truncate px-1">
                         {displayedText}
                       </span>
