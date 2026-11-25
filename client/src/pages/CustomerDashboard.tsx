@@ -75,6 +75,46 @@ export const CustomerDashboard: React.FC = () => {
     alert(`Success! Re-placed order '${reordered.orderNumber}' from saved artwork without redesigning.`);
   };
 
+  const handleDownloadInvoice = (ord: LocalOrder) => {
+    const invoiceText = `=======================================================
+DIGITAL HEROES - OFFICIAL TAX INVOICE & RECEIPT
+Invoice Ref: INV-${ord.orderNumber.replace("DH-", "")}
+Date: ${ord.createdAt ? new Date(ord.createdAt).toLocaleDateString() : new Date().toLocaleDateString()}
+Status: PAID (Transactional PCI Checkout)
+Accounting Standard: Xero-Ready Compatible Shape
+=======================================================
+
+CLIENT DETAILS:
+Customer Name:  ${ord.customerName}
+Account Email:  ${ord.customerEmail}
+
+ORDER SPECIFICATION:
+Print Division: ${ord.divisionName}
+Substrate:      ${ord.material}
+Dimensions:     ${ord.widthMm}mm x ${ord.heightMm}mm (+3mm Bleed Marks)
+Production Run: ${ord.quantity} Units
+Unit Rate:      ₹${ord.unitPrice.toFixed(2)} / ea
+
+FINANCIAL BREAKDOWN:
+-------------------------------------------------------
+Net Subtotal:   ₹${ord.subtotal.toFixed(2)}
+VAT / GST:      ₹${(ord.totalPrice - ord.subtotal).toFixed(2)}
+-------------------------------------------------------
+TOTAL PAID:     ₹${ord.totalPrice.toFixed(2)}
+Payment Status: SUCCESSFUL - NO BALANCE OUTSTANDING
+=======================================================`;
+
+    const blob = new Blob([invoiceText], { type: "text/plain;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Invoice_${ord.orderNumber}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const getStatusBadge = (status: LocalOrder["status"]) => {
     switch (status) {
       case "COMPLETED":
@@ -224,9 +264,9 @@ export const CustomerDashboard: React.FC = () => {
                           </button>
 
                           <button
-                            onClick={() => alert(`Downloaded Xero-compliant receipt for ${ord.orderNumber}`)}
+                            onClick={() => handleDownloadInvoice(ord)}
                             className="p-1 text-stone-400 hover:text-stone-700"
-                            title="Download Receipt"
+                            title="Download Tax Invoice / Receipt"
                           >
                             <FileText className="w-4 h-4" />
                           </button>
